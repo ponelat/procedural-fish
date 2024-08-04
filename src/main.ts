@@ -41,9 +41,9 @@ function update() {
   leader.y += leader.dy;
 
   if(touchVec) {
-    leader.x += touchVec[0] / 10
-    leader.y += touchVec[1] / 10
-    
+    let newVec = normalizeVec(touchVec)
+    leader.x += newVec[0] * 4
+    leader.y += newVec[1] * 4
   }
 
   // Keep the leader within the canvas bounds
@@ -236,6 +236,14 @@ function gameLoop() {
   requestAnimationFrame(gameLoop);
 }
 
+function normalizeVec([x, y]) {
+  let magnitude = Math.sqrt(x * x + y * y);
+  return [
+    x / magnitude,
+    y / magnitude
+  ]
+}
+
 // Handle arrow key inputs
 window.addEventListener('keydown', (e) => {
   switch (e.key) {
@@ -285,7 +293,6 @@ document.addEventListener('touchmove', function(event) {
       y: currentY - startY
     };
     touchVec = [vector.x, vector.y]
-    console.log(`Vector: (${vector.x}, ${vector.y})`);
   }
 }, { passive: true });
 
