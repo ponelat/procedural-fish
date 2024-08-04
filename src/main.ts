@@ -14,7 +14,7 @@ let leader = {
   y: canvas.height / 2,
   color: 'blue',
   speed: 5,
-  distance: 50,
+  distance: 45,
   dx: 0,
   dy: 0
 };
@@ -24,8 +24,7 @@ for(let i = 1; i < 5; i++) {
   spine.push({
     x: spine[i-1].x - 50,
     y: spine[i-1].y,
-    radius: 10,
-    distance: 50,
+    distance: 30,
     color: 'red',
     speed: 5,
     dx: 0,
@@ -34,11 +33,18 @@ for(let i = 1; i < 5; i++) {
 }
 
 let topLeftText = '0'
+let startX, startY, touchVec
 
 // Update leader position based on arrow keys
 function update() {
   leader.x += leader.dx;
   leader.y += leader.dy;
+
+  if(touchVec) {
+    leader.x += touchVec[0] / 10
+    leader.y += touchVec[1] / 10
+    
+  }
 
   // Keep the leader within the canvas bounds
   if (leader.x - leader.distance < 0) leader.x = leader.distance;
@@ -72,6 +78,14 @@ function update() {
   // Angle between leader and first segment.
   const angle = calculateAngle([spine[0].x, spine[0].y], [spine[1].x, spine[1].y], [spine[2].x, spine[2].y])
   topLeftText = `${angle.toFixed(0)} deg`
+}
+
+function attach2D([x, y], distance, angle) {
+    let radians = angle * Math.PI / 180; // Convert angle to radians
+    return [
+        x + distance * Math.cos(radians),
+        y + distance * Math.sin(radians)
+  ]
 }
 
 function rotateVector2D([x, y], angle) {
@@ -152,9 +166,30 @@ function draw() {
     ctx.stroke()
   }
 
+  // Draw some eyes
+  const baseAngle = angleFromVector([leader.x - spine[1].x, leader.y - spine[1].y])
+  const eyeXYLeft = attach2D([leader.x, leader.y], 30, baseAngle - 90)
+  const leftEye = parametizedAttach(leader, spine[1], 30, 90)
+  ctx.beginPath();
+  ctx.arc(eyeXYLeft[0], eyeXYLeft[1], 6, 0, Math.PI * 2);
+  ctx.fillStyle = 'orange';
+  ctx.fill();
+  ctx.closePath();
+  const eyeXYRight = attach2D([leader.x, leader.y], 30, baseAngle + 90)
+  ctx.beginPath();
+  ctx.arc(eyeXYRight[0], eyeXYRight[1], 6, 0, Math.PI * 2);
+  ctx.fillStyle = 'orange';
+  ctx.fill();
+  ctx.closePath();
+
 }
 
-function drawDot(x,y, color='red', radius=10) {
+function parametizedAttach(current, previous, distance, angle) {
+  const baseAngle = angleFromVector([previous.x - current.x, previous.y - current.y])
+  return attach2D([current.x, current.y], distance, baseAngle + angle)
+}
+
+function drawDot(x,y, color='red', radius=6) {
   ctx.beginPath();
   ctx.arc(x, y, radius, 0, Math.PI * 2);
   ctx.fillStyle = color;
@@ -190,6 +225,9 @@ function drawText(text, x=10,y=10) {
   ctx.fillText(text, x,y)
 }
 
+function angleFromVector([x, y]) {
+    return Math.atan2(y, x) * 180 / Math.PI; // Convert radians to degrees
+}
 
 // Main game loop
 function gameLoop() {
@@ -216,6 +254,7 @@ window.addEventListener('keydown', (e) => {
   }
 });
 
+
 window.addEventListener('keyup', (e) => {
   switch (e.key) {
     case 'ArrowUp':
@@ -227,6 +266,33 @@ window.addEventListener('keyup', (e) => {
       leader.dx = 0;
       break;
   }
+});
+
+document.addEventListener('touchstart', function(event) {
+    let touch = event.touches[0]; // Get the first touch point
+    startX = touch.clientX;
+    startY = touch.clientY;
+});
+
+document.addEventListener('touchmove', function(event) {
+  let touch = event.touches[0]; // Get the first touch point
+
+  if (startX !== undefined && startY !== undefined) {
+    let currentX = touch.clientX;
+    let currentY = touch.clientY;
+    let vector = {
+      x: currentX - startX,
+      y: currentY - startY
+    };
+    touchVec = [vector.x, vector.y]
+    console.log(`Vector: (${vector.x}, ${vector.y})`);
+  }
+}, { passive: true });
+
+document.addEventListener('touchend', function(event) {
+  startX = undefined;
+  startY = undefined;
+  touchVec = undefined
 });
 
 // Start the game loop
