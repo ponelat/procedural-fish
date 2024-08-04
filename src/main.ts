@@ -7,6 +7,7 @@ const ctx = canvas.getContext('2d');
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
+const SPINE_ANGLE = 120
 // Dot properties
 let leader = {
   x: canvas.width / 2,
@@ -32,6 +33,8 @@ for(let i = 1; i < 5; i++) {
   })
 }
 
+let topLeftText = '0'
+
 // Update leader position based on arrow keys
 function update() {
   leader.x += leader.dx;
@@ -43,24 +46,88 @@ function update() {
   if (leader.y - leader.distance < 0) leader.y = leader.distance;
   if (leader.y + leader.distance > canvas.height) leader.y = canvas.height - leader.distance;
 
-  // Update the spine segments
+  // Update the spine segments. Follow the leader
   for(let i = 1; i < spine.length; i++) {
+    const pprevious = spine[i-2]
     const previous = spine[i-1]
     const current = spine[i]
-    const oldVec = [previous.x - current.x, previous.y - current.y]
-    const newVec = scaleVectorToLength(oldVec, previous.distance)
-    console.log("oldVec,newVec", i, oldVec,newVec)
-    current.x = previous.x - newVec[0]
-    current.y = previous.y - newVec[1]
-    // spine[i].x += leader.dx
-    // spine[i].y += leader.dy
+    const nextXY = followXY(current, previous)
+    current.x = nextXY[0]
+    current.y = nextXY[1]
+
+    // If we have at least three, then ensure spine doesn't bend more than
+    // ... SPINE_ANGLE
+    if(pprevious) {
+      const angle = calculateAngle([current.x, current.y], [previous.x, previous.y], [pprevious.x, pprevious.y])
+      if(angle < SPINE_ANGLE) {
+	let oldVec = [previous.x - current.x, previous.y - current.y]
+	let newVec = rotateVector2D(oldVec, angle - SPINE_ANGLE)
+	current.x = previous.x - newVec[0]
+	current.y = previous.y - newVec[1]
+      }
+      
+    }
   }
+
+  // Angle between leader and first segment.
+  const angle = calculateAngle([spine[0].x, spine[0].y], [spine[1].x, spine[1].y], [spine[2].x, spine[2].y])
+  topLeftText = `${angle.toFixed(0)} deg`
+}
+
+function rotateVector2D([x, y], angle) {
+    let radians = angle * Math.PI / 180; // Convert angle to radians
+    let cosA = Math.cos(radians);
+    let sinA = Math.sin(radians);
+    
+  return [
+    x * cosA - y * sinA,
+    x * sinA + y * cosA
+  ]
+}
+
+function followXY(current, previous) {
+  const oldVec = [previous.x - current.x, previous.y - current.y]
+  const newVec = scaleVectorToLength(oldVec, previous.distance)
+  return [previous.x - newVec[0], previous.y - newVec[1]]
+}
+
+function calculateAngle(A, B, C) {
+    // Destructure points into coordinates
+    const [x1, y1] = A;
+    const [x2, y2] = B;
+    const [x3, y3] = C;
+
+    // Calculate vectors BA and BC
+    const BAx = x1 - x2;
+    const BAy = y1 - y2;
+    const BCx = x3 - x2;
+    const BCy = y3 - y2;
+
+    // Calculate the dot product of vectors BA and BC
+    const dotProduct = (BAx * BCx) + (BAy * BCy);
+
+    // Calculate the magnitudes of vectors BA and BC
+    const magnitudeBA = Math.sqrt(BAx * BAx + BAy * BAy);
+    const magnitudeBC = Math.sqrt(BCx * BCx + BCy * BCy);
+
+    // Calculate the cosine of the angle
+    const cosTheta = dotProduct / (magnitudeBA * magnitudeBC);
+
+    // Calculate the angle in radians
+    const angleInRadians = Math.acos(cosTheta);
+
+    // Convert the angle to degrees
+    const angleInDegrees = angleInRadians * (180 / Math.PI);
+
+    return angleInDegrees;
 }
 
 
 // Draw the leader
 function draw() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  drawText(topLeftText, 10,10)
 
   // Line connecting spine
   ctx.beginPath()
@@ -114,6 +181,15 @@ function scaleVectorToLength([x, y], desiredLength) {
 
   return [newX, newY]
 }
+
+function drawText(text, x=10,y=10) {
+  ctx.font = '2244 Arial';  // Font size and family
+  ctx.fillStyle = 'white';  // Text color
+  ctx.textAlign = 'left';   // Horizontal alignment
+  ctx.textBaseline = 'top'; // Vertical alignment
+  ctx.fillText(text, x,y)
+}
+
 
 // Main game loop
 function gameLoop() {
