@@ -1,0 +1,10 @@
+<emacs>
+  <command title="Dev" dir="." >
+
+    <cmd>
+      nix-shell -p bun --run "bun run dev"
+    </cmd>
+
+  </command>
+
+</emacs>
